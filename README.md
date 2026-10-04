@@ -56,6 +56,18 @@ start-up, the server listens on `$PORT`, and it runs as a non-root user.
 driver. To deploy without the Blueprint, create a Docker web service from the repo root and set `DATABASE_URL`,
 `JWT_SECRET` (32+ characters) and the seed passwords yourself.
 
+**If the deploy fails with `ENV=prod configuration error`**, the service has no environment variables. This
+happens when it was created as a plain Web Service rather than from the Blueprint. Either delete it and use
+**New → Blueprint**, or in the service's **Environment** tab add:
+
+| Key | Value |
+|---|---|
+| `DATABASE_URL` | the **Internal Database URL** of a Render PostgreSQL database (create one first, same region) |
+| `JWT_SECRET` | click **Generate** (or any random string of 32+ characters) |
+| `ADMIN_PASSWORD`, `RESEARCHER_PASSWORD`, `CANDIDATE_PASSWORD` | passwords of your choice (otherwise the public defaults apply) |
+
+then **Manual Deploy → Deploy latest commit**.
+
 **Limits on Render:**
 
 - **No code judge.** Render containers have no Docker daemon, so "Run sample tests" returns a clear 503 and

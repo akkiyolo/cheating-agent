@@ -61,8 +61,15 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _prod_secrets(self) -> Settings:
-        if self.env == "prod" and (self.jwt_secret == DEV_JWT_SECRET or len(self.jwt_secret) < 32):
-            raise ValueError("JWT_SECRET must be set to a random value of at least 32 characters when ENV=prod")
+        if self.env != "prod":
+            return self
+        problems = []
+        if "database_url" not in self.model_fields_set:
+            problems.append("DATABASE_URL is not set (use your Postgres connection string)")
+        if self.jwt_secret == DEV_JWT_SECRET or len(self.jwt_secret) < 32:
+            problems.append("JWT_SECRET must be a random value of at least 32 characters")
+        if problems:
+            raise ValueError("ENV=prod configuration error: " + "; ".join(problems))
         return self
 
     @property
