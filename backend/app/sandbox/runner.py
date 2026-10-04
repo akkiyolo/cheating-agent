@@ -137,11 +137,13 @@ class DockerSandbox:
 
     def run_sync(self, language: str, code: str, tests: list[TestCase]) -> SandboxResult:
         if language not in LANGUAGES:
-            return SandboxResult(language=language, compiled=False, passed=False, error=f"unsupported language {language}")
+            return SandboxResult(language=language, compiled=False, passed=False,
+                                 error=f"unsupported language {language}")
         if not tests:
             tests = [TestCase(input="")]
         limits = SandboxLimits.from_settings(self.settings, language)
-        work = Path(tempfile.mkdtemp(prefix="sbx-"))
+        work = Path(tempfile.mkdtemp(prefix="sbx-", dir=self.settings.sandbox_workdir))
+        work.chmod(0o755)  # mkdtemp is 0700; the sandbox user (65534) must be able to read it
         name = f"cheating-agent-sbx-{uuid.uuid4().hex[:12]}"
         try:
             (work / LANGUAGES[language]["file"]).write_text(code, encoding="utf-8", newline="\n")
@@ -167,7 +169,8 @@ class DockerSandbox:
                 proc = subprocess.run(cmd, capture_output=True, timeout=wall)
             except subprocess.TimeoutExpired:
                 subprocess.run(["docker", "kill", name], capture_output=True)
-                return SandboxResult(language=language, compiled=False, passed=False, error="sandbox wall-clock timeout")
+                return SandboxResult(language=language, compiled=False, passed=False,
+                                     error="sandbox wall-clock timeout")
             except OSError as e:
                 raise SandboxUnavailable(str(e)) from e
             elapsed = int((time.perf_counter() - t0) * 1000)

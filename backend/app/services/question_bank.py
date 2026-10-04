@@ -92,7 +92,8 @@ WORDS = [
 STATIC_MCQ: list[tuple[str, str, str, list[str]]] = [
     ("ds-lifo", "data structures", "Which data structure follows Last-In-First-Out (LIFO) order?",
      ["Stack", "Queue", "Heap", "Linked list"]),
-    ("algo-bsearch", "algorithms", "What is the worst-case time complexity of binary search on a sorted array of n elements?",
+    ("algo-bsearch", "algorithms",
+     "What is the worst-case time complexity of binary search on a sorted array of n elements?",
      ["O(log n)", "O(n)", "O(n log n)", "O(1)"]),
     ("sql-having", "databases", "Which SQL clause filters groups produced by GROUP BY?",
      ["HAVING", "WHERE", "ORDER BY", "LIMIT"]),
@@ -107,11 +108,13 @@ STATIC_MCQ: list[tuple[str, str, str, list[str]]] = [
      ["String", "int", "boolean", "char"]),
     ("db-3nf", "databases", "Which normal form removes transitive dependencies of non-key attributes on the key?",
      ["Third normal form (3NF)", "First normal form (1NF)", "Second normal form (2NF)", "Fourth normal form (4NF)"]),
-    ("ll-head", "data structures", "What is the time complexity of inserting a node at the head of a singly linked list?",
+    ("ll-head", "data structures",
+     "What is the time complexity of inserting a node at the head of a singly linked list?",
      ["O(1)", "O(n)", "O(log n)", "O(n^2)"]),
     ("bio-co2", "science", "Which gas do plants primarily absorb from the atmosphere for photosynthesis?",
      ["Carbon dioxide", "Oxygen", "Nitrogen", "Hydrogen"]),
-    ("calc-sin", "mathematics", "What is the derivative of sin(x) with respect to x?", ["cos(x)", "-cos(x)", "-sin(x)", "tan(x)"]),
+    ("calc-sin", "mathematics", "What is the derivative of sin(x) with respect to x?",
+     ["cos(x)", "-cos(x)", "-sin(x)", "tan(x)"]),
     ("os-deadlock", "operating systems", "Which of these is one of the four Coffman conditions necessary for deadlock?",
      ["Circular wait", "Preemption", "Starvation", "Paging"]),
     ("http-404", "web", "What does the HTTP status code 404 indicate?",
@@ -263,7 +266,8 @@ def _ms_primes(rng: random.Random) -> Instance:
         c = rng.randrange(21, 200, 2)
         if not _is_prime(c) and c not in comps:
             comps.append(c)
-    return _multi_q("Select ALL of the numbers below that are prime.", [str(p) for p in primes], [str(c) for c in comps])
+    return _multi_q("Select ALL of the numbers below that are prime.", [str(p) for p in primes],
+                    [str(c) for c in comps])
 
 
 @template("ms-div6", "multi_select", "number theory", difficulty=2, parametric=True)
@@ -274,7 +278,8 @@ def _ms_div6(rng: random.Random) -> Instance:
         c = rng.randint(20, 240)
         if c % 6 and c not in bad and (c % 2 == 0 or c % 3 == 0):
             bad.append(c)
-    return _multi_q("Select ALL numbers that are divisible by both 2 and 3.", [str(g) for g in good], [str(b) for b in bad])
+    return _multi_q("Select ALL numbers that are divisible by both 2 and 3.", [str(g) for g in good],
+                    [str(b) for b in bad])
 
 
 @template("ms-squares", "multi_select", "number theory", difficulty=1, parametric=True)
@@ -537,7 +542,8 @@ def _code_brackets(rng: random.Random) -> Instance:
         return "YES" if not st else "NO"
 
     def rand_balanced(n: int) -> str:
-        out, st = [], []
+        out: list[str] = []
+        st: list[str] = []
         for _ in range(n):
             if st and rng.random() < 0.5:
                 out.append({"(": ")", "[": "]", "{": "}"}[st.pop()])
@@ -565,7 +571,8 @@ def _code_brackets(rng: random.Random) -> Instance:
 
 @template("code-recurrence", "coding", "math", difficulty=2, parametric=True)
 def _code_recurrence(rng: random.Random) -> Instance:
-    a, b, m, s = rng.randint(2, 9), rng.randint(1, 20), rng.choice([1_000_003, 998_244_353, 1_000_000_007]), rng.randint(0, 9)
+    a, b = rng.randint(2, 9), rng.randint(1, 20)
+    m, s = rng.choice([1_000_003, 998_244_353, 1_000_000_007]), rng.randint(0, 9)
 
     def ref(n: int) -> int:
         v = s
@@ -632,7 +639,7 @@ def _img_shapes(rng: random.Random) -> Instance:
 def _table_revenue(rng: random.Random) -> Instance:
     products = rng.sample(["Widget", "Gadget", "Sprocket", "Gizmo", "Doohickey", "Bracket", "Flange"], 4)
     regions = ["North", "South", "East"]
-    rows = []
+    rows: list[list[Any]] = []
     for p in products:
         for r in rng.sample(regions, 2):
             rows.append([p, r, rng.randint(3, 60), rng.choice([4, 5, 8, 10, 12, 15, 20])])
@@ -650,7 +657,7 @@ def _table_revenue(rng: random.Random) -> Instance:
 @template("table-scores", "table", "data analysis", difficulty=2, parametric=True)
 def _table_scores(rng: random.Random) -> Instance:
     names = rng.sample(FIRST_NAMES, 6)
-    rows = [[n, rng.randint(40, 100), rng.randint(40, 100), rng.randint(40, 100)] for n in names]
+    rows: list[list[Any]] = [[n, rng.randint(40, 100), rng.randint(40, 100), rng.randint(40, 100)] for n in names]
     thr = rng.randint(65, 80)
     count = sum(1 for _, a, b, c in rows if (a + b + c) / 3 > thr)
     return {

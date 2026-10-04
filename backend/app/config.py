@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     sandbox_python_image: str = "python:3.13-slim"
     sandbox_cpp_image: str = "gcc:14"
     sandbox_java_image: str = "eclipse-temurin:21-jdk"
+    # Where per-run work dirs are created. When the backend itself runs in a container that talks to the host
+    # Docker daemon, this must be a path mounted at the *same* location on the host (see docker-compose.yml).
+    sandbox_workdir: str | None = None
 
     assessment_duration_s: int = Field(default=60 * 60, ge=60)
 

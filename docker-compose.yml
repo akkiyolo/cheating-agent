@@ -1,0 +1,53 @@
+# Full stack: Postgres + backend API + front end (nginx).  `docker compose up --build`
+# then open http://localhost:3000.  Requires JWT_SECRET in .env (see .env.example).
+#
+# Security note: the backend mounts the host Docker socket so the code judge can start sandbox
+# containers. Anything with access to that socket is effectively root on the host — keep the backend
+# off untrusted networks, or run the judge on a dedicated machine.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: assess
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-assess}
+      POSTGRES_DB: assessment
+    ports: ["5433:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assess -d assessment"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  backend:
+    build: ./backend
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql+asyncpg://assess:${POSTGRES_PASSWORD:-assess}@db:5432/assessment
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CORS_ORIGINS: http://localhost:3000
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin-pass}
+      RESEARCHER_PASSWORD: ${RESEARCHER_PASSWORD:-researcher-pass}
+      CANDIDATE_PASSWORD: ${CANDIDATE_PASSWORD:-candidate-pass}
+      SANDBOX_WORKDIR: /tmp/assessment-sandbox
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Same path inside and outside: sandbox containers bind-mount these work dirs via the host daemon.
+      - /tmp/assessment-sandbox:/tmp/assessment-sandbox
+    ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: ./mock-assessment
+    depends_on:
+      backend: { condition: service_healthy }
+    ports: ["3000:80"]
+
+volumes:
+  pgdata:
