@@ -17,11 +17,46 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/instructions" element={<RequireAuth><Instructions /></RequireAuth>} />
-      <Route path="/assessment" element={<RequireAuth><AssessmentPage /></RequireAuth>} />
-      <Route path="/review" element={<RequireAuth><Review /></RequireAuth>} />
-      <Route path="/submitted" element={<RequireAuth><Submitted /></RequireAuth>} />
-      <Route path="/results" element={<RequireAuth><ResultsPage /></RequireAuth>} />
+      <Route
+        path="/instructions"
+        element={
+          <RequireAuth>
+            <Instructions />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/assessment"
+        element={
+          <RequireAuth>
+            <AssessmentPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/review"
+        element={
+          <RequireAuth>
+            <Review />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/submitted"
+        element={
+          <RequireAuth>
+            <Submitted />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/results"
+        element={
+          <RequireAuth>
+            <ResultsPage />
+          </RequireAuth>
+        }
+      />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
