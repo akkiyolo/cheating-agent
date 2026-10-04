@@ -141,6 +141,8 @@ class DockerSandbox:
                                  error=f"unsupported language {language}")
         if not tests:
             tests = [TestCase(input="")]
+        if shutil.which("docker") is None:
+            raise SandboxUnavailable("docker is not installed on this server")
         limits = SandboxLimits.from_settings(self.settings, language)
         work = Path(tempfile.mkdtemp(prefix="sbx-", dir=self.settings.sandbox_workdir))
         work.chmod(0o755)  # mkdtemp is 0700; the sandbox user (65534) must be able to read it

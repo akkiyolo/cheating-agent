@@ -6,10 +6,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+DEV_JWT_SECRET = "change-me-dev-only-secret-0123456789abcdef"
 
 
 class Settings(BaseSettings):
@@ -22,7 +23,7 @@ class Settings(BaseSettings):
 
     env: Literal["dev", "test", "prod"] = "dev"
     database_url: str = "postgresql+asyncpg://assess:assess@localhost:5433/assessment"
-    jwt_secret: str = "change-me-dev-only-secret-0123456789abcdef"
+    jwt_secret: str = DEV_JWT_SECRET
     access_token_minutes: int = 30
     refresh_token_days: int = 7
     cors_origins: str = "http://localhost:3000"
@@ -43,7 +44,26 @@ class Settings(BaseSettings):
     # Docker daemon, this must be a path mounted at the *same* location on the host (see docker-compose.yml).
     sandbox_workdir: str | None = None
 
+    # Single-image deployment (e.g. Render): when set, the built front end in this directory is served at "/" and
+    # the API moves under "/api", matching the front end's same-origin API base.
+    frontend_dist: str | None = None
+
     assessment_duration_s: int = Field(default=60 * 60, ge=60)
+
+    @field_validator("database_url")
+    @classmethod
+    def _async_driver(cls, v: str) -> str:
+        # Hosting providers hand out postgres:// / postgresql:// URLs; SQLAlchemy async needs the asyncpg driver.
+        for prefix in ("postgres://", "postgresql://"):
+            if v.startswith(prefix):
+                return "postgresql+asyncpg://" + v[len(prefix):]
+        return v
+
+    @model_validator(mode="after")
+    def _prod_secrets(self) -> Settings:
+        if self.env == "prod" and (self.jwt_secret == DEV_JWT_SECRET or len(self.jwt_secret) < 32):
+            raise ValueError("JWT_SECRET must be set to a random value of at least 32 characters when ENV=prod")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

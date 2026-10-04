@@ -19,10 +19,11 @@ React front end for candidates. Runs locally or as a three-container Docker Comp
 | Front end: login, instructions, assessment, review, submitted, results | Working, tested |
 | Alembic migrations (PostgreSQL) | Working; upgrade / downgrade / `alembic check` verified |
 | Docker images + Compose stack (Postgres, API, nginx front end) | Working; smoke-tested incl. sandboxed code runs |
+| Single-image deployment (root `Dockerfile`) + Render Blueprint (`render.yaml`) | Working; image run locally in Render-like conditions (no code judge there, see below) |
 | Makefile, `scripts/dev.ps1`, GitHub Actions CI | Added; `dev.ps1` targets verified on Windows, CI not yet run on GitHub |
 
-Last full local run: backend **79 passed** on SQLite and on PostgreSQL 16, `ruff` and `mypy` clean; front end
-**6 passed**, `eslint`, `prettier --check`, `tsc` and `vite build` clean.
+Last full local run: backend **85 passed** (79 of them also verified on PostgreSQL 16), `ruff` and `mypy` clean;
+front end **7 passed**, `eslint`, `prettier --check`, `tsc` and `vite build` clean.
 
 ## Quick start (Docker)
 
@@ -37,6 +38,31 @@ Open http://localhost:3000 and sign in as `candidate` / `candidate-pass`. The ba
 The backend container mounts the host Docker socket so the code judge can start sandbox containers, and shares
 `/tmp/assessment-sandbox` with the host at the same path. Access to the Docker socket is root-equivalent on the
 host; don't expose this backend to untrusted networks.
+
+## Deploy to Render
+
+The root `Dockerfile` builds one image containing both parts: the built front end is served at `/` and the API
+under `/api` by the same FastAPI process (enabled by `FRONTEND_DIST`, which the image sets). Migrations run at
+start-up, the server listens on `$PORT`, and it runs as a non-root user.
+
+1. Push this repo to GitHub (already done if you're reading this there).
+2. In Render: **New → Blueprint**, pick the repo. `render.yaml` creates:
+   - `assessment-db`: a free PostgreSQL database
+   - `assessment-platform`: a free Docker web service built from `./Dockerfile`, health check `/api/health`
+3. Render generates `JWT_SECRET` and the three seed passwords. Find them under the web service's
+   **Environment** tab, then sign in at `https://<service>.onrender.com`.
+
+`DATABASE_URL` is wired from the database automatically; `postgres://` URLs are converted to the asyncpg
+driver. To deploy without the Blueprint, create a Docker web service from the repo root and set `DATABASE_URL`,
+`JWT_SECRET` (32+ characters) and the seed passwords yourself.
+
+**Limits on Render:**
+
+- **No code judge.** Render containers have no Docker daemon, so "Run sample tests" returns a clear 503 and
+  coding answers are saved but shown as *Not graded (code judge unavailable)* and score 0. Every other question
+  type works. For the judge, run `docker-compose.yml` on a VM with Docker instead.
+- Free web services sleep when idle (the first request after a while takes ~1 minute), and Render's free
+  Postgres databases expire after 30 days unless upgraded. Choose paid plans in `render.yaml` for anything real.
 
 ## Developer commands
 
@@ -76,6 +102,8 @@ backend/
   Dockerfile
 mock-assessment/  React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query + Zustand (Dockerfile, nginx.conf)
 scripts/dev.ps1   Windows task runner (mirrors the Makefile)
+Dockerfile        single-image build (front end + API) for Render or any container host
+render.yaml       Render Blueprint (web service + Postgres)
 docker-compose.yml, Makefile, .env.example, .github/workflows/ci.yml
 ```
 
@@ -127,12 +155,13 @@ Read from environment variables or a `.env` file at the repo root (git-ignored).
 |---|---|---|
 | `ENV` | `dev` | `dev` / `test` / `prod` (`prod` skips `create_all`) |
 | `DATABASE_URL` | `postgresql+asyncpg://assess:assess@localhost:5433/assessment` | async SQLAlchemy URL |
-| `JWT_SECRET` | dev placeholder | **set in any real deployment** |
+| `JWT_SECRET` | dev placeholder | **required with `ENV=prod`** (32+ characters; start-up fails otherwise) |
 | `ACCESS_TOKEN_MINUTES` / `REFRESH_TOKEN_DAYS` | `30` / `7` | token lifetimes |
 | `CORS_ORIGINS` | `http://localhost:3000` | comma-separated |
 | `ASSESSMENT_DURATION_S` | `3600` | default assessment length |
 | `SANDBOX_CPUS` / `SANDBOX_MEMORY_MB` / `SANDBOX_PIDS` / `SANDBOX_TIMEOUT_S` | `0.5` / `256` / `64` / `10` | sandbox limits |
 | `SANDBOX_PYTHON_IMAGE` / `SANDBOX_CPP_IMAGE` / `SANDBOX_JAVA_IMAGE` | `python:3.13-slim` / `gcc:14` / `eclipse-temurin:21-jdk` | judge images |
+| `FRONTEND_DIST` | unset | serve this built front end at `/` and move the API under `/api` (set in the root `Dockerfile`) |
 | `SANDBOX_WORKDIR` | system temp | where per-run work dirs are created (must be host-visible at the same path when the API runs in a container) |
 
 ### API

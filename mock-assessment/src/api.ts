@@ -144,5 +144,6 @@ export interface Results {
     points_max: number;
     tests_passed?: number;
     tests_total?: number;
+    error?: string; // set when the answer could not be graded (e.g. code judge unavailable)
   }[];
 }
