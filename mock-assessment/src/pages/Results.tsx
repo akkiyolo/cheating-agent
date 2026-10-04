@@ -91,8 +91,19 @@ export default function ResultsPage() {
                   <tr key={q.number} className="border-b border-slate-100">
                     <td className="py-1">{q.number}</td>
                     <td>{KIND_LABEL[q.kind] ?? q.kind}</td>
-                    <td className={q.correct ? "text-emerald-700" : "text-rose-700"}>
-                      {!q.answered ? "Not answered" : q.correct ? "Correct" : "Incorrect"}
+                    <td
+                      className={
+                        q.error ? "text-amber-700" : q.correct ? "text-emerald-700" : "text-rose-700"
+                      }
+                      title={q.error}
+                    >
+                      {!q.answered
+                        ? "Not answered"
+                        : q.error
+                          ? "Not graded (code judge unavailable)"
+                          : q.correct
+                            ? "Correct"
+                            : "Incorrect"}
                       {q.tests_total !== undefined && ` (${q.tests_passed}/${q.tests_total} tests)`}
                     </td>
                     <td>

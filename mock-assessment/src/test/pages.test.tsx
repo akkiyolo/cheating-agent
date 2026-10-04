@@ -7,6 +7,7 @@ import QuestionView from "../components/QuestionView";
 import { formatClock } from "../components/Timer";
 import AssessmentPage, { isAnswered } from "../pages/Assessment";
 import Review from "../pages/Review";
+import ResultsPage from "../pages/Results";
 import { useAuth } from "../store";
 import type { Question } from "../api";
 
@@ -156,5 +157,39 @@ describe("Review page", () => {
     await userEvent.click(screen.getByRole("button", { name: "Submit" }));
     expect(await screen.findByText("submitted page")).toBeInTheDocument();
     expect(calls.some((c) => c.url.endsWith("/submit"))).toBe(true);
+  });
+});
+
+describe("Results page", () => {
+  it("flags coding answers the judge could not grade", async () => {
+    mockFetch(() => ({
+      status: "submitted",
+      score: 1,
+      max_score: 4,
+      accuracy: 0.5,
+      by_kind: { mcq: { correct: 1, total: 1, points: 1, points_max: 1 } },
+      questions: [
+        { number: 1, kind: "mcq", answered: true, correct: true, points: 1, points_max: 1 },
+        {
+          number: 2,
+          kind: "coding",
+          answered: true,
+          correct: false,
+          points: 0,
+          points_max: 3,
+          error: "sandbox unavailable: docker is not installed on this server",
+        },
+      ],
+    }));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <ResultsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Not graded (code judge unavailable)")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Correct" })).toBeInTheDocument();
   });
 });
