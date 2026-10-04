@@ -10,7 +10,10 @@ export default function Instructions() {
   const setSession = useAuth((s) => s.setSession);
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { data, isLoading } = useQuery({ queryKey: ["assessments"], queryFn: () => api<Assessment[]>("/assessments") });
+  const { data, isLoading } = useQuery({
+    queryKey: ["assessments"],
+    queryFn: () => api<Assessment[]>("/assessments"),
+  });
   const a = data?.[0];
 
   async function start() {
@@ -44,10 +47,14 @@ export default function Instructions() {
             <li>The assessment is submitted automatically when time runs out.</li>
           </ul>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />I have read the
-            instructions
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />I have
+            read the instructions
           </label>
-          {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
+          {error && (
+            <p role="alert" className="text-sm text-rose-600">
+              {error}
+            </p>
+          )}
           <Button disabled={!agreed} onClick={start}>
             Start assessment
           </Button>

@@ -56,7 +56,8 @@ export async function fetchImage(path: string): Promise<string> {
 
 // ---- types --------------------------------------------------------------------------------
 
-export type Kind = "mcq" | "true_false" | "multi_select" | "numerical" | "text" | "coding" | "image" | "table";
+export type Kind =
+  "mcq" | "true_false" | "multi_select" | "numerical" | "text" | "coding" | "image" | "table";
 
 export interface Option {
   id: string;
@@ -88,10 +89,7 @@ export interface Question {
 }
 
 export type Response =
-  | { option_id: string }
-  | { option_ids: string[] }
-  | { value: string }
-  | { language: string; code: string };
+  { option_id: string } | { option_ids: string[] } | { value: string } | { language: string; code: string };
 
 export interface SessionInfo {
   id: string;
@@ -120,8 +118,15 @@ export interface RunResult {
   tests_failed: number;
   execution_time_ms: number;
   error: string | null;
-  cases: { index: number; passed: boolean | null; stdout: string; stderr: string; expected: string | null;
-    timed_out: boolean; exit_code: number }[];
+  cases: {
+    index: number;
+    passed: boolean | null;
+    stdout: string;
+    stderr: string;
+    expected: string | null;
+    timed_out: boolean;
+    exit_code: number;
+  }[];
 }
 
 export interface Results {
@@ -130,6 +135,14 @@ export interface Results {
   max_score: number;
   accuracy: number;
   by_kind: Record<string, { correct: number; total: number; points: number; points_max: number }>;
-  questions: { number: number; kind: string; answered: boolean; correct: boolean; points: number;
-    points_max: number; tests_passed?: number; tests_total?: number }[];
+  questions: {
+    number: number;
+    kind: string;
+    answered: boolean;
+    correct: boolean;
+    points: number;
+    points_max: number;
+    tests_passed?: number;
+    tests_total?: number;
+  }[];
 }

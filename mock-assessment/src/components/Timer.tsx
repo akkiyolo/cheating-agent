@@ -12,7 +12,7 @@ export function formatClock(s: number): string {
 
 /** Counts down from the server-provided remaining time; calls onExpire once at zero. */
 export default function Timer({ remainingS, onExpire }: { remainingS: number; onExpire: () => void }) {
-  const deadline = useRef(Date.now() + remainingS * 1000);
+  const deadline = useRef(0); // set in the effect below (Date.now() is impure during render)
   const [left, setLeft] = useState(remainingS);
   const fired = useRef(false);
 

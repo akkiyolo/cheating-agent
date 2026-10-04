@@ -22,9 +22,16 @@ export const useAuth = create<AuthState>()(
       setSession: (sessionId) => set({ sessionId }),
       logout: () => set({ accessToken: null, refreshToken: null, username: null, sessionId: null }),
     }),
-    { name: "assessment-auth", storage: { getItem: (k) => {
-      const v = sessionStorage.getItem(k);
-      return v ? JSON.parse(v) : null;
-    }, setItem: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)), removeItem: (k) => sessionStorage.removeItem(k) } },
+    {
+      name: "assessment-auth",
+      storage: {
+        getItem: (k) => {
+          const v = sessionStorage.getItem(k);
+          return v ? JSON.parse(v) : null;
+        },
+        setItem: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)),
+        removeItem: (k) => sessionStorage.removeItem(k),
+      },
+    },
   ),
 );

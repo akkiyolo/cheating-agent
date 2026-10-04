@@ -16,12 +16,11 @@ React front end (in progress) for candidates.
 | Randomised question bank (MCQ, true/false, multi-select, numerical, text, image, table, coding) | Working, tested |
 | Server-side grading, incl. hidden coding tests | Working, tested |
 | Docker code sandbox / judge (Python, C++, Java) | Working, tested |
-| Front end: login, instructions | Working |
-| Front end: assessment, review, submitted, results pages | **Not implemented** (`App.tsx` imports them, so the front end does not build yet) |
+| Front end: login, instructions, assessment, review, submitted, results | Working, tested |
 | Alembic migrations | Not implemented (`alembic/` is empty; dev/test use `create_all`) |
 | Docker Compose, Makefile, CI | Not implemented |
 
-Last full test run: **79 passed** (`backend`, `uv run pytest`).
+Last full test run: **79 passed** backend (`uv run pytest`), **6 passed** front end (`npm test`); `npm run build` and `npm run lint` clean.
 
 ## Repository layout
 
@@ -141,12 +140,19 @@ npm test        # Vitest + React Testing Library
 npm run lint
 ```
 
-Implemented: login, instructions/start page, countdown timer, typed API client with token refresh,
-question renderer component (`components/QuestionView.tsx`). Missing: the assessment, review, submitted and
-results pages.
+| Route | Page |
+|---|---|
+| `/login` | sign in |
+| `/instructions` | assessment overview and start |
+| `/assessment` | one question at a time, question navigator, countdown timer, autosave (choices save immediately, typed answers after a short pause, everything is flushed before navigating), mark for review, retry banner if a save fails; coding questions get a language picker, editor and "Run sample tests" against the visible examples |
+| `/review` | answered / unanswered / marked overview, jump back to any question, submit with a confirmation dialog |
+| `/submitted` | confirmation |
+| `/results` | score, accuracy, breakdown by question type and by question (incl. hidden-test counts for coding) |
 
-Uncommitted, unfinished files from the last session — delete them if you take the project in a different
-direction: `src/telemetry.ts`, `src/faults.ts`, and `src/pages/Assessment.tsx` (a truncated fragment).
+When the timer reaches zero the session is submitted automatically (the server also enforces the deadline).
+The current question position is kept in `sessionStorage`, so a page refresh resumes where you were.
+
+`npm run build` type-checks and produces `dist/`. Node 20.17 is supported (jsdom is pinned to v25 for that).
 
 ## Security notes
 
