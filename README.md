@@ -2,7 +2,7 @@
 
 A self-hosted online assessment platform: a FastAPI backend that generates a fresh, randomised question set for
 every session, grades it on the server, and judges code submissions in a locked-down Docker sandbox; plus a
-React front end (in progress) for candidates.
+React front end for candidates. Runs locally or as a three-container Docker Compose stack.
 
 > **Scope note.** This repository was originally started with the goal of building an autonomous agent that
 > completes online assessments. That part was **not built** and is not part of this project. What exists is
@@ -17,10 +17,46 @@ React front end (in progress) for candidates.
 | Server-side grading, incl. hidden coding tests | Working, tested |
 | Docker code sandbox / judge (Python, C++, Java) | Working, tested |
 | Front end: login, instructions, assessment, review, submitted, results | Working, tested |
-| Alembic migrations | Not implemented (`alembic/` is empty; dev/test use `create_all`) |
-| Docker Compose, Makefile, CI | Not implemented |
+| Alembic migrations (PostgreSQL) | Working; upgrade / downgrade / `alembic check` verified |
+| Docker images + Compose stack (Postgres, API, nginx front end) | Working; smoke-tested incl. sandboxed code runs |
+| Makefile, `scripts/dev.ps1`, GitHub Actions CI | Added; `dev.ps1` targets verified on Windows, CI not yet run on GitHub |
 
-Last full test run: **79 passed** backend (`uv run pytest`), **6 passed** front end (`npm test`); `npm run build` and `npm run lint` clean.
+Last full local run: backend **79 passed** on SQLite and on PostgreSQL 16, `ruff` and `mypy` clean; front end
+**6 passed**, `eslint`, `prettier --check`, `tsc` and `vite build` clean.
+
+## Quick start (Docker)
+
+```bash
+cp .env.example .env          # then set JWT_SECRET to a long random string
+docker compose up -d --build  # Postgres :5433, API :8000, web :3000
+```
+
+Open http://localhost:3000 and sign in as `candidate` / `candidate-pass`. The backend runs
+`alembic upgrade head` on start-up. Stop with `docker compose down` (add `-v` to delete the database volume).
+
+The backend container mounts the host Docker socket so the code judge can start sandbox containers, and shares
+`/tmp/assessment-sandbox` with the host at the same path. Access to the Docker socket is root-equivalent on the
+host; don't expose this backend to untrusted networks.
+
+## Developer commands
+
+`make <target>` on Linux/macOS/WSL, or `.\scripts\dev.ps1 <target>` on Windows:
+
+| Target | Does |
+|---|---|
+| `install` | `uv sync` + `npm ci` |
+| `db` | start only Postgres from Compose |
+| `migrate` | `alembic upgrade head` |
+| `backend` / `frontend` | dev servers on :8000 / :3000 |
+| `dev` | Postgres + both dev servers |
+| `test`, `test-backend`, `test-frontend` | test suites |
+| `lint`, `format`, `typecheck` | ruff, eslint, prettier, mypy, tsc |
+| `build` | production front-end build |
+| `docker`, `docker-down` | Compose stack up / down |
+| `clean` | remove build and cache output |
+
+CI (`.github/workflows/ci.yml`) runs lint, type checks, migrations, backend tests on SQLite and PostgreSQL with
+the real Docker sandbox, front-end tests and build, and a Compose image build.
 
 ## Repository layout
 
@@ -35,8 +71,12 @@ backend/
     config.py     settings from env / .env (frozen)
     db.py         engine + session management
     main.py       FastAPI app, seeds users + default assessment
+  alembic/        migrations (alembic.ini at backend/)
   tests/          unit/ and integration/ (pytest, pytest-asyncio)
-mock-assessment/  React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query + Zustand
+  Dockerfile
+mock-assessment/  React 19 + TypeScript + Vite + Tailwind 4 + TanStack Query + Zustand (Dockerfile, nginx.conf)
+scripts/dev.ps1   Windows task runner (mirrors the Makefile)
+docker-compose.yml, Makefile, .env.example, .github/workflows/ci.yml
 ```
 
 ## Backend
@@ -56,7 +96,7 @@ uv sync
 DATABASE_URL=sqlite+aiosqlite:///./dev.db uv run uvicorn app.main:app --reload --port 8000
 ```
 
-On start-up (non-prod) the app creates tables and seeds three users and one assessment
+On start-up the app seeds three users and one assessment
 (`general-aptitude`, 21 questions).
 
 | User | Default password | Role |
@@ -66,6 +106,18 @@ On start-up (non-prod) the app creates tables and seeds three users and one asse
 | `candidate` | `candidate-pass` | CANDIDATE |
 
 Change these with `ADMIN_PASSWORD`, `RESEARCHER_PASSWORD`, `CANDIDATE_PASSWORD`.
+
+### Database and migrations
+
+In `dev` / `test` the app calls `create_all` at start-up, so SQLite works with no setup. With `ENV=prod` (as in the
+Docker image) tables are managed only by Alembic:
+
+```bash
+cd backend
+uv run alembic upgrade head                      # apply
+uv run alembic revision --autogenerate -m "..."  # after changing models
+uv run alembic check                             # fails if models and migrations disagree
+```
 
 ### Configuration
 
@@ -81,6 +133,7 @@ Read from environment variables or a `.env` file at the repo root (git-ignored).
 | `ASSESSMENT_DURATION_S` | `3600` | default assessment length |
 | `SANDBOX_CPUS` / `SANDBOX_MEMORY_MB` / `SANDBOX_PIDS` / `SANDBOX_TIMEOUT_S` | `0.5` / `256` / `64` / `10` | sandbox limits |
 | `SANDBOX_PYTHON_IMAGE` / `SANDBOX_CPP_IMAGE` / `SANDBOX_JAVA_IMAGE` | `python:3.13-slim` / `gcc:14` / `eclipse-temurin:21-jdk` | judge images |
+| `SANDBOX_WORKDIR` | system temp | where per-run work dirs are created (must be host-visible at the same path when the API runs in a container) |
 
 ### API
 

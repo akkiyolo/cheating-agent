@@ -146,7 +146,8 @@ async def grade_session(db: AsyncSession, sess: AssessmentSession, sandbox: Dock
         entry: dict[str, Any] = {"number": i + 1, "uid": q["uid"], "kind": q["kind"], "answered": a is not None,
                                  "points_max": pts_max}
         if q["kind"] == "coding":
-            ok, pts, info = False, 0.0, {}
+            ok, pts = False, 0.0
+            info: dict[str, Any] = {}
             resp = a.response if a else None
             if resp and resp.get("code", "").strip():
                 tests = [TestCase(**t) for t in q["answer_key"]["tests"]]
@@ -167,14 +168,14 @@ async def grade_session(db: AsyncSession, sess: AssessmentSession, sandbox: Dock
         detail.append(entry)
     sess.score, sess.max_score = round(total, 3), max_total
     by_kind: dict[str, dict[str, float]] = {}
-    for e in detail:
-        k = by_kind.setdefault(e["kind"], {"correct": 0, "total": 0, "points": 0.0, "points_max": 0.0})
+    for item in detail:
+        k = by_kind.setdefault(item["kind"], {"correct": 0, "total": 0, "points": 0.0, "points_max": 0.0})
         k["total"] += 1
-        k["correct"] += 1 if e["correct"] else 0
-        k["points"] += e["points"]
-        k["points_max"] += e["points_max"]
+        k["correct"] += 1 if item["correct"] else 0
+        k["points"] += item["points"]
+        k["points_max"] += item["points_max"]
     sess.result_detail = {"questions": detail, "by_kind": by_kind,
-                          "accuracy": sum(1 for e in detail if e["correct"]) / len(detail) if detail else 0}
+                          "accuracy": sum(1 for item in detail if item["correct"]) / len(detail) if detail else 0}
     await db.commit()
 
 
