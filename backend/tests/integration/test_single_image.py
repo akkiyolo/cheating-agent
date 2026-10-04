@@ -30,9 +30,9 @@ async def spa_client(db: Database, dist: Path) -> AsyncIterator[httpx.AsyncClien
     from app.main import create_app
 
     app = create_app()
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
-            yield c
+    transport = httpx.ASGITransport(app=app)
+    async with app.router.lifespan_context(app), httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
 
 
 async def test_api_is_served_under_api_prefix(spa_client: httpx.AsyncClient) -> None:
@@ -69,9 +69,13 @@ def test_hosting_database_urls_get_async_driver() -> None:
     assert Settings(database_url="sqlite+aiosqlite:///x.db").database_url == "sqlite+aiosqlite:///x.db"
 
 
-def test_prod_requires_real_jwt_secret() -> None:
-    with pytest.raises(ValueError, match="JWT_SECRET"):
+def test_prod_requires_database_url_and_real_jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    db = "postgres://u:p@h/db"
+    with pytest.raises(ValueError, match="DATABASE_URL is not set.*JWT_SECRET"):
         Settings(env="prod")
     with pytest.raises(ValueError, match="JWT_SECRET"):
-        Settings(env="prod", jwt_secret="short")
-    assert Settings(env="prod", jwt_secret="x" * 40).env == "prod"
+        Settings(env="prod", database_url=db, jwt_secret="short")
+    with pytest.raises(ValueError, match="DATABASE_URL"):
+        Settings(env="prod", jwt_secret="x" * 40)
+    assert Settings(env="prod", database_url=db, jwt_secret="x" * 40).env == "prod"
